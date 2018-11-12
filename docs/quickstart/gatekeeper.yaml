@@ -1,0 +1,238 @@
+---
+#
+# Install the Open Policy Agent Operator
+#
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: openpolicyagents.controllers.replicated.com
+spec:
+  group: controllers.replicated.com
+  names:
+    kind: OpenPolicyAgent
+    plural: openpolicyagents
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            enabledFailureModes:
+              properties:
+                fail:
+                  type: boolean
+                ignore:
+                  type: boolean
+              required:
+              - ignore
+              - fail
+              type: object
+            name:
+              type: string
+          required:
+          - name
+          - enabledFailureModes
+          type: object
+        status:
+          properties:
+            mainPolicyDeployed:
+              type: boolean
+          required:
+          - mainPolicyDeployed
+          type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+
+#
+# Install the Policy Controller
+#
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: admissionpolicies.policies.replicated.com
+spec:
+  group: policies.replicated.com
+  names:
+    kind: AdmissionPolicy
+    plural: admissionpolicies
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            failurePolicy:
+              type: string
+            name:
+              type: string
+            policy:
+              type: string
+          required:
+          - name
+          - failurePolicy
+          - policy
+          type: object
+        status:
+          type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+
+#
+# The controller shared StatefulSet
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller-manager-service
+  namespace: system
+  labels:
+    control-plane: controller-manager
+    controller-tools.k8s.io: "1.0"
+spec:
+  selector:
+    control-plane: controller-manager
+    controller-tools.k8s.io: "1.0"
+  ports:
+  - port: 443
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: controller-manager
+  namespace: system
+  labels:
+    control-plane: controller-manager
+    controller-tools.k8s.io: "1.0"
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      controller-tools.k8s.io: "1.0"
+  serviceName: controller-manager-service
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+        controller-tools.k8s.io: "1.0"
+    spec:
+      containers:
+      - command:
+        - /root/manager
+        image: replicated/gatekeeper:0.0.1
+        imagePullPolicy: IfNotPresent
+        name: manager
+        env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: SECRET_NAME
+            value: $(WEBHOOK_SECRET_NAME)
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        ports:
+        - containerPort: 9876
+          name: webhook-server
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp/cert
+          name: cert
+          readOnly: true
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-server-secret
+  namespace: system
+---
+
+#
+# Create an installation of OpenPolicyAgent named "opa", with
+# failurePolicy set to ignore only
+#
+apiVersion: controllers.replicated.com/v1alpha1
+kind: OpenPolicyAgent
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: opa
+spec:
+  name: gatekeeper
+  enabledFailureModes:
+    ignore: true
+    fail: false
+---
+
+#
+# Deploy a policy to prevent images with a "latest" tag from being run
+#
+apiVersion: policies.replicated.com/v1alpha1
+kind: AdmissionPolicy
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: no-latest-tags
+spec:
+  name: latest
+  failurePolicy: Ignore
+  policy: |
+    package kubernetes.admission
+
+    deny[msg] {
+        input.request.kind.kind = "Pod"
+        input.request.operation = "CREATE"
+        endswith(input.request.object.spec.containers[_].image, ":latest")
+        msg = "pod contains image using latest tag"
+    }

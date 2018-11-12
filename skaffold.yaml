@@ -1,0 +1,10 @@
+apiVersion: skaffold/v1alpha5
+kind: Config
+build:
+  artifacts:
+    - image: gatekeeper
+      context: "./"
+
+deploy:
+  kustomize:
+    path: "./config/default"
