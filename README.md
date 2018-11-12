@@ -4,11 +4,17 @@ GateKeeper is a Kubernetes Operator for installing, configuring and managing [Op
 
 ## Getting Started
 
-The quick installation is:
+The recommended way to configure GateKeeper is to use [Replicated Ship](https://github.com/replicatedhq/ship):
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/replicatedhq/gatekeeper/master/docs/quickstart/gatekeeper.yaml
+brew tap replicatedhq/ship
+brew install ship
+ship init https://raw.githubusercontent.com/replicatedhq/gatekeeper/master/docs/quickstart
 ```
+
+Ship will download and give you an opportunity to review the Kubernetes manifests included to run GateKeeper. You can create patches and overlays to make any changes necessary for your environment. Once finished, follow the instructions in Ship and `kubectl apply -f rendered.yaml`.
+
+You can then use `ship watch && ship update` to watch and configure updates as they are shipped here.
 
 For more information on the components, and other methods to install GateKeeper, [read the docs](https://github.com/replicatedhq/gatekeeper/tree/master/docs/)
 ## Motivations
