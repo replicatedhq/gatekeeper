@@ -41,7 +41,7 @@ jobs:
             sudo mv kubebuilder_${version}_linux_amd64 /usr/local/kubebuilder
       - run:
           name: build
-          command: PATH=$PATH:/usr/local/kubebuilder/bin make bin/gatekeeper test
+          command: PATH=$PATH:/usr/local/kubebuilder/bin make test
 
       - store_test_results:
           path: cover.out
