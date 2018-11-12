@@ -7,7 +7,7 @@ GateKeeper is a Kubernetes Operator for installing, configuring and managing [Op
 The quick installation is:
 
 ```shell
-kubectl apply -h https://raw.githubusercontent.com/replicatedhq/gatekeeper/master/docs/quickstart/gatekeeper.yaml
+kubectl apply -f https://raw.githubusercontent.com/replicatedhq/gatekeeper/master/docs/quickstart/gatekeeper.yaml
 ```
 
 For more information on the components, and other methods to install GateKeeper, [read the docs](https://github.com/replicatedhq/gatekeeper/tree/master/docs/)
