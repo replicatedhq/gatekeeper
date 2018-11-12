@@ -1,0 +1,102 @@
+version: 2
+
+experimental:
+  notify:
+    branches:
+      only:
+        - master
+
+defaults: &defaults
+  docker:
+  - image: circleci/golang:1.11
+  working_directory: /go/src/github.com/replicatedhq/gatekeeper
+  environment: &environment
+
+jobs:
+  is_upstream_master:
+    <<: *defaults
+    steps:
+    - run: |
+        set -veuo pipefail
+        if [ "${CIRCLE_PROJECT_USERNAME}" != "replicatedhq" ]; then
+          echo "refusing to build fork \"${CIRCLE_PROJECT_USERNAME}\""
+          exit 1
+        fi
+        if [ "${CIRCLE_BRANCH}" != "master" ]; then
+          echo "refusing to build branch \"${CIRCLE_BRANCH}\""
+          exit 1
+        fi
+
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          name: kubebuilder
+          command: |
+            version=1.0.5
+            curl -L -O https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${version}/kubebuilder_${version}_linux_amd64.tar.gz
+            tar -zxvf kubebuilder_${version}_linux_amd64.tar.gz
+            sudo mv kubebuilder_${version}_linux_amd64 /usr/local/kubebuilder
+      - run:
+          name: build
+          command: PATH=$PATH:/usr/local/kubebuilder/bin make bin/gatekeeper test
+
+      - store_test_results:
+          path: cover.out
+
+      - persist_to_workspace:
+          root: /go/src/github.com/replicatedhq/gatekeeper
+          paths:
+            - bin
+            - config
+            - pkg
+            - cmd
+            - vendor
+            - Dockerfile
+
+  build_docker_image:
+    <<: *defaults
+    steps:
+    - setup_remote_docker:
+        version: 17.06.0-ce
+    - attach_workspace:
+        at: /go/src/github.com/replicatedhq/gatekeeper
+    - run: |
+        export WORKDIR=/go/src/github.com/replicatedhq/gatekeeper
+        docker build -f ${DOCKERFILE} \
+          -t ${CIRCLE_PROJECT_REPONAME}:latest \
+          ${WORKDIR}
+    - deploy:
+        name: push image
+        command: |
+          docker tag \
+            ${CIRCLE_PROJECT_REPONAME}:latest \
+            replicated/gatekeeper:latest
+          docker login --username $DOCKERHUB_USER --password $DOCKERHUB_PASSWORD
+          docker push replicated/gatekeeper:latest
+
+workflows:
+  version: 2
+  pull_request:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: /master/
+
+  full_deploy:
+    jobs:
+      - is_upstream_master:
+          filters:
+            branches:
+              only: master
+      - build:
+          requires:
+          - is_upstream_master
+
+      - build_docker_image:
+          requires:
+            - is_upstream_master
+            - build
