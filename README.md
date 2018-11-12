@@ -9,7 +9,7 @@ The recommended way to configure GateKeeper is to use [Replicated Ship](https://
 ```shell
 brew tap replicatedhq/ship
 brew install ship
-ship init https://raw.githubusercontent.com/replicatedhq/gatekeeper/master/docs/gatekeeper-k8s
+ship init https://github.com/replicatedhq/gatekeeper/tree/master/docs/gatekeeper-k8s
 ```
 
 Ship will download and give you an opportunity to review the Kubernetes manifests included to run GateKeeper. You can create patches and overlays to make any changes necessary for your environment. Once finished, follow the instructions in Ship and `kubectl apply -f rendered.yaml`.
