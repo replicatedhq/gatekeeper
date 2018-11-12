@@ -65,7 +65,7 @@ jobs:
         at: /go/src/github.com/replicatedhq/gatekeeper
     - run: |
         export WORKDIR=/go/src/github.com/replicatedhq/gatekeeper
-        docker build -f ${DOCKERFILE} \
+        docker build \
           -t ${CIRCLE_PROJECT_REPONAME}:latest \
           ${WORKDIR}
     - deploy:
