@@ -17,6 +17,13 @@ Ship will download and give you an opportunity to review the Kubernetes manifest
 You can then use `ship watch && ship update` to watch and configure updates as they are shipped here.
 
 For more information on the components, and other methods to install GateKeeper, [read the docs](https://github.com/replicatedhq/gatekeeper/tree/master/docs/).
+
+## Deploying Policies
+
+After installing GateKeeper to a cluster, a policy can be deployed using `kubectl apply -f ./config/samples/policies_v1alpha1_admissionpolicy.yaml`. (This is a sample policy that prevents any pod from using images tagged `:latest`). When the policy is applied, if OPA is running in the same namespace, the controller will delpoy the policy from the YAML to the OPA instance. If OPA is not found, the controller will provision a new OPA instance, and deploy the policy to that new instance, whne it's ready.
+
+This handles the TLS configuration, webhook configuration, and all underlying Kubernetes resources that are required to create a dynamic admission controller.
+
 ## Motivations
 
 The Open Policy Agent (OPA) project is an ambitious project that does much more than just Kubernetes Admission Controllers.
