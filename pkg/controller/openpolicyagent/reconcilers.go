@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	serviceNamePrefix = "gatekeeper-opa"
-	secretNamePrefix  = "gatekeeper"
+	serviceNamePrefix    = "gatekeeper-opa"
+	secretNamePrefix     = "gatekeeper"
+	deploymentNamePrefix = "gatekeeper"
 )
 
 func (r *ReconcileOpenPolicyAgent) reconcileOpenPolicyAgent(instance *controllersv1alpha1.OpenPolicyAgent) error {
@@ -272,7 +273,7 @@ func (r *ReconcileOpenPolicyAgent) reconcileOpenPolicyAgentService(instance *con
 func (r *ReconcileOpenPolicyAgent) isOpenPolicyAgentDeploymentReady(instance *controllersv1alpha1.OpenPolicyAgent, failurePolicy string) (bool, error) {
 	debug := level.Info(log.With(r.Logger, "method", "reconcileOpenPolicyAgent.isOpenPolicyAgentDeploymentReady"))
 
-	deploymentName := strings.ToLower(fmt.Sprintf("%s-%s", instance.Name, failurePolicy))
+	deploymentName := strings.ToLower(fmt.Sprintf("%s-%s", deploymentNamePrefix, failurePolicy))
 	secretName := strings.ToLower(fmt.Sprintf("%s-%s", secretNamePrefix, failurePolicy))
 
 	foundSecret := &corev1.Secret{}
@@ -373,7 +374,7 @@ func (r *ReconcileOpenPolicyAgent) deleteOpenPolicyAgentDeployment(instance *con
 func (r *ReconcileOpenPolicyAgent) reconcileOpenPolicyAgentDeployment(instance *controllersv1alpha1.OpenPolicyAgent, failurePolicy string) error {
 	debug := level.Info(log.With(r.Logger, "method", "reconcileOpenPolicyAgent.reconcileOpenPolicyAgentDeployment"))
 
-	deploymentName := strings.ToLower(fmt.Sprintf("%s-%s", instance.Name, failurePolicy))
+	deploymentName := strings.ToLower(fmt.Sprintf("%s-%s", deploymentNamePrefix, failurePolicy))
 	secretName := strings.ToLower(fmt.Sprintf("%s-%s", secretNamePrefix, failurePolicy))
 
 	// Deployment
