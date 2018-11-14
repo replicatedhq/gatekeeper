@@ -20,9 +20,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudflare/cfssl/helpers"
+	"github.com/cloudflare/cfssl/revoke"
 	"github.com/onsi/gomega"
 	controllersv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/controllers/v1alpha1"
 	"golang.org/x/net/context"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,11 +37,11 @@ import (
 var c client.Client
 
 var expectedRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: "foo", Namespace: "default"}}
-var depKey = types.NamespacedName{Name: "foo-deployment", Namespace: "default"}
+var secretKey = types.NamespacedName{Name: "gatekeeper-ignore", Namespace: "default"}
 
 const timeout = time.Second * 5
 
-func TestReconcile(t *testing.T) {
+func TestReconcileIgnoreOnly(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	instance := &controllersv1alpha1.OpenPolicyAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -47,6 +50,10 @@ func TestReconcile(t *testing.T) {
 		},
 		Spec: controllersv1alpha1.OpenPolicyAgentSpec{
 			Name: "name",
+			EnabledFailureModes: &controllersv1alpha1.OpenPolicyAgentEnabledFailureModes{
+				Ignore: true,
+				Fail:   false,
+			},
 		},
 	}
 
@@ -78,17 +85,30 @@ func TestReconcile(t *testing.T) {
 	defer c.Delete(context.TODO(), instance)
 	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
 
-	//deploy := &appsv1.Deployment{}
-	// g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-	// 	Should(gomega.Succeed())
+	secret := &corev1.Secret{}
+	g.Eventually(func() error { return c.Get(context.TODO(), secretKey, secret) }, timeout).
+		Should(gomega.Succeed())
 
-	// Delete the Deployment and expect Reconcile to be called for Deployment deletion
-	//g.Expect(c.Delete(context.TODO(), deploy)).NotTo(gomega.HaveOccurred())
-	//g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
-	//g.Eventually(func() error { return c.Get(context.TODO(), depKey, deploy) }, timeout).
-	//	Should(gomega.Succeed())
+	// Validate that the tls cert was signed by the ca cert that's in the secret
+	parsedCaCert, err := helpers.ParseCertificatePEM(secret.Data["ca.crt"])
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	revoked, ok := revoke.VerifyCertificate(parsedCaCert)
+	g.Expect(revoked).To(gomega.BeFalse())
+	g.Expect(ok).To(gomega.BeTrue())
 
-	// Manually delete Deployment since GC isn't enabled in the test control plane
-	//g.Expect(c.Delete(context.TODO(), deploy)).To(gomega.Succeed())
+	parsedServerCert, err := helpers.ParseCertificatePEM(secret.Data["tls.crt"])
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	revoked, ok = revoke.VerifyCertificate(parsedServerCert)
+	g.Expect(revoked).To(gomega.BeFalse())
+	g.Expect(ok).To(gomega.BeTrue())
+
+	// Delete the Secret and expect Reconcile to be called for Secret deletion
+	g.Expect(c.Delete(context.TODO(), secret)).NotTo(gomega.HaveOccurred())
+	g.Eventually(requests, timeout).Should(gomega.Receive(gomega.Equal(expectedRequest)))
+	g.Eventually(func() error { return c.Get(context.TODO(), secretKey, secret) }, timeout).
+		Should(gomega.Succeed())
+
+	// Manually delete Secret since GC isn't enabled in the test control plane
+	//g.Expect(c.Delete(context.TODO(), secret)).To(gomega.Succeed())
 
 }
