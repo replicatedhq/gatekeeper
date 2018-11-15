@@ -21,7 +21,7 @@ spec:
       containers:
       - command:
         - /root/manager
-        image: replicated/gatekeeper:0.0.1
+        image: replicated/gatekeeper:0.0.2
         imagePullPolicy: Always
         name: manager
         env:
