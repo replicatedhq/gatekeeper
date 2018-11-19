@@ -16,7 +16,7 @@ func New() log.Logger {
 		logLevel = "info"
 	}
 
-	stdoutLogger := log.NewJSONLogger(os.Stdout)
+	stdoutLogger := log.NewLogfmtLogger(os.Stdout)
 	stdoutLogger = log.With(stdoutLogger, "ts", log.DefaultTimestampUTC)
 	stdoutLogger = log.With(stdoutLogger, "caller", pathCaller(5))
 	stdoutLogger = withLevel(stdoutLogger, logLevel)

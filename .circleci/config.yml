@@ -27,6 +27,25 @@ jobs:
           exit 1
         fi
 
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+
+      - run:
+          name: kubebuilder
+          command: |
+            version=1.0.5
+            curl -L -O https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${version}/kubebuilder_${version}_linux_amd64.tar.gz
+            tar -zxvf kubebuilder_${version}_linux_amd64.tar.gz
+            sudo mv kubebuilder_${version}_linux_amd64 /usr/local/kubebuilder
+      - run: |
+          export PATH=$PATH:/usr/local/kubebuilder/bin
+          make test
+          if [ -n "$CC_TEST_REPORTER_ID" ]; then
+            make ci-upload-coverage
+          fi
+
   build:
     <<: *defaults
     steps:
@@ -41,10 +60,7 @@ jobs:
             sudo mv kubebuilder_${version}_linux_amd64 /usr/local/kubebuilder
       - run:
           name: build
-          command: PATH=$PATH:/usr/local/kubebuilder/bin make test
-
-      - store_test_results:
-          path: cover.out
+          command: PATH=$PATH:/usr/local/kubebuilder/bin make all
 
       - persist_to_workspace:
           root: /go/src/github.com/replicatedhq/gatekeeper
@@ -59,6 +75,11 @@ jobs:
   build_docker_image:
     <<: *defaults
     steps:
+    - run: |
+        if [ "${CIRCLE_PROJECT_USERNAME}" != "replicatedhq" ]; then
+          echo Unable to deploy, the project is currently on a fork.
+          exit 0
+        fi
     - setup_remote_docker:
         version: 17.06.0-ce
     - attach_workspace:
@@ -88,15 +109,14 @@ workflows:
 
   full_deploy:
     jobs:
-      - is_upstream_master:
+      - test
+      - build:
+          requires:
+            - test
+
+      - build_docker_image:
           filters:
             branches:
               only: master
-      - build:
           requires:
-          - is_upstream_master
-
-      - build_docker_image:
-          requires:
-            - is_upstream_master
             - build

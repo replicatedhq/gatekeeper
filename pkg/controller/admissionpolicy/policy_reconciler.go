@@ -23,6 +23,11 @@ func (r *ReconcileAdmissionPolicy) reconcileAdmissionPolicy(instance *policiesv1
 		return errors.Wrap(err, "validate policy")
 	}
 
+	// Ensure the Gatekeeper proxy is running
+	if err := r.ensureProxyRunning(); err != nil {
+		return errors.Wrap(err, "ensure gatekeeper proxy running")
+	}
+
 	// Deploy any required OPA instances referenced by this policy
 	if err := r.ensureOPARunningForPolicy(instance); err != nil {
 		return errors.Wrap(err, "ensure opa running for policy")

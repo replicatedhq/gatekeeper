@@ -16,6 +16,30 @@ const (
 	webhookNameFormat    = "gatekeeper-opa-%s"
 )
 
+func managerName() (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
+	return types.NamespacedName{
+		Name:      "gatekeeper-controller-manager",
+		Namespace: ns,
+	}, nil
+}
+
+func gatekeeperSecretName() (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
+	return types.NamespacedName{
+		Name:      "gatekeeper-tls",
+		Namespace: ns,
+	}, nil
+}
+
 func opaSecretName(failurePolicy string) (types.NamespacedName, error) {
 	_, ns, err := confighelper.ConfigAndNamespace()
 	if err != nil {
@@ -24,6 +48,18 @@ func opaSecretName(failurePolicy string) (types.NamespacedName, error) {
 
 	return types.NamespacedName{
 		Name:      strings.ToLower(fmt.Sprintf(secretNameFormat, failurePolicy)),
+		Namespace: ns,
+	}, nil
+}
+
+func gatekeeperServiceName() (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
+	return types.NamespacedName{
+		Name:      "gatekeeper",
 		Namespace: ns,
 	}, nil
 }
@@ -40,6 +76,18 @@ func opaServiceName(failurePolicy string) (types.NamespacedName, error) {
 	}, nil
 }
 
+func gatekeeperDeploymentName() (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
+	return types.NamespacedName{
+		Name:      "gatekeeper",
+		Namespace: ns,
+	}, nil
+}
+
 func opaDeploymentName(failurePolicy string) (types.NamespacedName, error) {
 	_, ns, err := confighelper.ConfigAndNamespace()
 	if err != nil {
@@ -50,6 +98,10 @@ func opaDeploymentName(failurePolicy string) (types.NamespacedName, error) {
 		Name:      strings.ToLower(fmt.Sprintf(deploymentNameFormat, failurePolicy)),
 		Namespace: ns,
 	}, nil
+}
+
+func getkeeperWebhookName() string {
+	return "gatekeeper"
 }
 
 func opaWebhookName(failurePolicy string) string {
