@@ -24,6 +24,7 @@ import (
 	"github.com/cloudflare/cfssl/revoke"
 	"github.com/onsi/gomega"
 	"github.com/replicatedhq/gatekeeper/pkg/logger"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestCreateCertificateAuthority(t *testing.T) {
@@ -57,7 +58,7 @@ func TestCreateCertFromCA(t *testing.T) {
 	parsedCA, err := helpers.ParseCertificatePEM(caCert)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	cert, _, err := CreateCertFromCA(logger, "namespace", "name", caCert, caKey)
+	cert, _, err := CreateCertFromCA(logger, types.NamespacedName{Namespace: "namesspace", Name: "name"}, caCert, caKey)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	parsedCert, err := helpers.ParseCertificatePEM(cert)
