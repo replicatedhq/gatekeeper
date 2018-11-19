@@ -2,9 +2,10 @@ package admissionpolicy
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
+	confighelper "admiralty.io/multicluster-service-account/pkg/config"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -15,25 +16,40 @@ const (
 	webhookNameFormat    = "gatekeeper-opa-%s"
 )
 
-func opaSecretName(failurePolicy string) types.NamespacedName {
+func opaSecretName(failurePolicy string) (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
 	return types.NamespacedName{
 		Name:      strings.ToLower(fmt.Sprintf(secretNameFormat, failurePolicy)),
-		Namespace: os.Getenv("POD_NAMESPACE"),
-	}
+		Namespace: ns,
+	}, nil
 }
 
-func opaServiceName(failurePolicy string) types.NamespacedName {
+func opaServiceName(failurePolicy string) (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
 	return types.NamespacedName{
 		Name:      strings.ToLower(fmt.Sprintf(serviceNameFormat, failurePolicy)),
-		Namespace: os.Getenv("POD_NAMESPACE"),
-	}
+		Namespace: ns,
+	}, nil
 }
 
-func opaDeploymentName(failurePolicy string) types.NamespacedName {
+func opaDeploymentName(failurePolicy string) (types.NamespacedName, error) {
+	_, ns, err := confighelper.ConfigAndNamespace()
+	if err != nil {
+		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
+	}
+
 	return types.NamespacedName{
 		Name:      strings.ToLower(fmt.Sprintf(deploymentNameFormat, failurePolicy)),
-		Namespace: os.Getenv("POD_NAMESPACE"),
-	}
+		Namespace: ns,
+	}, nil
 }
 
 func opaWebhookName(failurePolicy string) string {

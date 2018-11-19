@@ -41,22 +41,31 @@ func (r *ReconcileAdmissionPolicy) validatePolicy(instance *policiesv1alpha1.Adm
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) buildOPAUri(instance *policiesv1alpha1.AdmissionPolicy) string {
-	serviceName := opaServiceName(instance.Spec.FailurePolicy)
-	return fmt.Sprintf("https://%s.%s.svc/v1/policies/%s", serviceName.Name, serviceName.Namespace, instance.Spec.Name)
+func (r *ReconcileAdmissionPolicy) buildOPAUri(instance *policiesv1alpha1.AdmissionPolicy) (string, error) {
+	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+	if err != nil {
+		return "", errors.Wrap(err, "get service name")
+	}
+	return fmt.Sprintf("https://%s.%s.svc/v1/policies/%s", serviceName.Name, serviceName.Namespace, instance.Spec.Name), nil
 }
 
 func (r *ReconcileAdmissionPolicy) applyPolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "applyPolicy"))
 	debug.Log("event", "applyPolicy", "name", instance.Name)
 
-	opaURI := r.buildOPAUri(instance)
+	opaURI, err := r.buildOPAUri(instance)
+	if err != nil {
+		return errors.Wrap(err, "get url")
+	}
 
 	// Get the CA from the secret so we can communicate
-	secretName := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	if err != nil {
+		return errors.Wrap(err, "get secret name")
+	}
 
 	foundSecret := &corev1.Secret{}
-	err := r.Get(context.TODO(), secretName, foundSecret)
+	err = r.Get(context.TODO(), secretName, foundSecret)
 	if err != nil {
 		return errors.Wrap(err, "get secret")
 	}
