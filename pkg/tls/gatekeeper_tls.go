@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // CreateCertificateAuthority will create a new CA and return the
@@ -42,7 +43,7 @@ func CreateCertificateAuthority(logger log.Logger) ([]byte, []byte, error) {
 
 // CreateCertFromCA takkes a certificate authority cert and key and generates a
 // new cert, and uses the CA to sign it
-func CreateCertFromCA(logger log.Logger, namespace string, name string, caCert []byte, caKey []byte) ([]byte, []byte, error) {
+func CreateCertFromCA(logger log.Logger, namespacedName types.NamespacedName, caCert []byte, caKey []byte) ([]byte, []byte, error) {
 	// Parse the ca into an x509 object
 	parsedCaCert, err := helpers.ParseCertificatePEM(caCert)
 	if err != nil {
@@ -58,9 +59,9 @@ func CreateCertFromCA(logger log.Logger, namespace string, name string, caCert [
 			Algo: "rsa",
 			Size: 2048,
 		},
-		CN: fmt.Sprintf("%s.%s.svc", name, namespace),
+		CN: fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace),
 		Hosts: []string{
-			fmt.Sprintf("%s.%s.svc", name, namespace),
+			fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace),
 		},
 	}
 	certReq, key, err := csr.ParseRequest(&req)
@@ -71,15 +72,15 @@ func CreateCertFromCA(logger log.Logger, namespace string, name string, caCert [
 	signReq := signer.NewStandardSigner(parsedCaKey, parsedCaCert, signer.DefaultSigAlgo(parsedCaKey))
 
 	signedCert, err := signReq.Sign(
-		fmt.Sprintf("%s.%s.svc", name, namespace),
+		fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace),
 		certReq,
 		&signer.Subject{
-			CN: fmt.Sprintf("%s.%s.svc", name, namespace),
+			CN: fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace),
 			Hosts: []string{
-				fmt.Sprintf("%s.%s.svc", name, namespace),
+				fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace),
 			},
 		},
-		fmt.Sprintf("%s.%s.svc", name, namespace))
+		fmt.Sprintf("%s.%s.svc", namespacedName.Name, namespacedName.Namespace))
 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "sign")
