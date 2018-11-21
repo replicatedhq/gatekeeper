@@ -31,7 +31,7 @@ func RootCmd(c *config.Config, out io.Writer) *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /etc/gatekeeper.yaml)")
 	cmd.PersistentFlags().String("log-level", "off", "Log level")
 
-	cmd.AddCommand(Status(c, out))
+	cmd.AddCommand(Policies(c, out))
 	cmd.AddCommand(Proxy(c, out))
 
 	viper.BindPFlags(cmd.Flags())

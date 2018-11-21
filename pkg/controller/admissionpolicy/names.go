@@ -1,7 +1,6 @@
 package admissionpolicy
 
 import (
-	"fmt"
 	"strings"
 
 	confighelper "admiralty.io/multicluster-service-account/pkg/config"
@@ -10,10 +9,10 @@ import (
 )
 
 const (
-	serviceNameFormat    = "gatekeeper-opa-%s"
-	secretNameFormat     = "gatekeeper-opa-%s"
-	deploymentNameFormat = "gatekeeper-opa-%s"
-	webhookNameFormat    = "gatekeeper-opa-%s"
+	serviceNameFormat    = "gatekeeper-opa"
+	secretNameFormat     = "gatekeeper-opa"
+	deploymentNameFormat = "gatekeeper-opa"
+	webhookNameFormat    = "gatekeeper-opa"
 )
 
 func managerName() (types.NamespacedName, error) {
@@ -40,14 +39,14 @@ func gatekeeperSecretName() (types.NamespacedName, error) {
 	}, nil
 }
 
-func opaSecretName(failurePolicy string) (types.NamespacedName, error) {
+func opaSecretName() (types.NamespacedName, error) {
 	_, ns, err := confighelper.ConfigAndNamespace()
 	if err != nil {
 		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
 	}
 
 	return types.NamespacedName{
-		Name:      strings.ToLower(fmt.Sprintf(secretNameFormat, failurePolicy)),
+		Name:      strings.ToLower(secretNameFormat),
 		Namespace: ns,
 	}, nil
 }
@@ -64,14 +63,14 @@ func gatekeeperServiceName() (types.NamespacedName, error) {
 	}, nil
 }
 
-func opaServiceName(failurePolicy string) (types.NamespacedName, error) {
+func opaServiceName() (types.NamespacedName, error) {
 	_, ns, err := confighelper.ConfigAndNamespace()
 	if err != nil {
 		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
 	}
 
 	return types.NamespacedName{
-		Name:      strings.ToLower(fmt.Sprintf(serviceNameFormat, failurePolicy)),
+		Name:      strings.ToLower(serviceNameFormat),
 		Namespace: ns,
 	}, nil
 }
@@ -88,14 +87,14 @@ func gatekeeperDeploymentName() (types.NamespacedName, error) {
 	}, nil
 }
 
-func opaDeploymentName(failurePolicy string) (types.NamespacedName, error) {
+func opaDeploymentName() (types.NamespacedName, error) {
 	_, ns, err := confighelper.ConfigAndNamespace()
 	if err != nil {
 		return types.NamespacedName{}, errors.Wrap(err, "config and namespace")
 	}
 
 	return types.NamespacedName{
-		Name:      strings.ToLower(fmt.Sprintf(deploymentNameFormat, failurePolicy)),
+		Name:      strings.ToLower(deploymentNameFormat),
 		Namespace: ns,
 	}, nil
 }
@@ -104,6 +103,6 @@ func getkeeperWebhookName() string {
 	return "gatekeeper"
 }
 
-func opaWebhookName(failurePolicy string) string {
-	return strings.ToLower(fmt.Sprintf(webhookNameFormat, failurePolicy))
+func opaWebhookName() string {
+	return strings.ToLower(webhookNameFormat)
 }

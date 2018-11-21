@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/onsi/gomega"
-	policiesv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha2"
 	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +39,7 @@ const timeout = time.Second * 5
 
 func TestReconcile(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
-	instance := &policiesv1alpha1.AdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
+	instance := &policiesv1alpha2.AdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"}}
 
 	// Setup the Manager and Controller.  Wrap the Controller Reconcile function so it writes each request to a
 	// channel when it is finished.

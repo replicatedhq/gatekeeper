@@ -5,7 +5,7 @@ IMG ?= controller:latest
 all: test manager cli
 
 # Build the CLI
-cli: fmt vet test
+cli: fmt vet test generate
 	go build -o bin/gatekeeper github.com/replicatedhq/gatekeeper/cmd/gatekeeper
 
 # Run tests
@@ -44,6 +44,8 @@ vet:
 # Generate code
 generate:
 	go generate ./pkg/... ./cmd/...
+	rm -rf ./pkg/client/gatekeeperclientset/fake
+	rm -rf ./pkg/client/gatekeeperclientset/typed/policies/v1alpha2/fake
 
 # Build the docker image
 docker-build: test

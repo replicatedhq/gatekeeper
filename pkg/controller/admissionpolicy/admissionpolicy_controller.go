@@ -21,7 +21,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	policiesv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha2"
 	"github.com/replicatedhq/gatekeeper/pkg/logger"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to AdmissionPolicy
-	err = c.Watch(&source.Kind{Type: &policiesv1alpha1.AdmissionPolicy{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &policiesv1alpha2.AdmissionPolicy{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Uncomment watch a Deployment created by AdmissionPolicy - change this for objects you create
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &policiesv1alpha1.AdmissionPolicy{},
+		OwnerType:    &policiesv1alpha2.AdmissionPolicy{},
 	})
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ type ReconcileAdmissionPolicy struct {
 // +kubebuilder:rbac:groups=policies.replicated.com,resources=admissionpolicies,verbs=get;list;watch;create;update;patch;delete
 func (r *ReconcileAdmissionPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the AdmissionPolicy instance
-	instance := &policiesv1alpha1.AdmissionPolicy{}
+	instance := &policiesv1alpha2.AdmissionPolicy{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

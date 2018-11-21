@@ -14,11 +14,11 @@ import (
 	"github.com/go-kit/kit/log/level"
 
 	"github.com/pkg/errors"
-	policiesv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (r *ReconcileAdmissionPolicy) reconcileAdmissionPolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) reconcileAdmissionPolicy(instance *policiesv1alpha2.AdmissionPolicy) error {
 	if err := r.validatePolicy(instance); err != nil {
 		return errors.Wrap(err, "validate policy")
 	}
@@ -29,7 +29,7 @@ func (r *ReconcileAdmissionPolicy) reconcileAdmissionPolicy(instance *policiesv1
 	}
 
 	// Deploy any required OPA instances referenced by this policy
-	if err := r.ensureOPARunningForPolicy(instance); err != nil {
+	if err := r.ensureOPARunning(instance); err != nil {
 		return errors.Wrap(err, "ensure opa running for policy")
 	}
 
@@ -41,20 +41,20 @@ func (r *ReconcileAdmissionPolicy) reconcileAdmissionPolicy(instance *policiesv1
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) validatePolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) validatePolicy(instance *policiesv1alpha2.AdmissionPolicy) error {
 	// TODO
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) buildOPAUri(instance *policiesv1alpha1.AdmissionPolicy) (string, error) {
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+func (r *ReconcileAdmissionPolicy) buildOPAUri(instance *policiesv1alpha2.AdmissionPolicy) (string, error) {
+	serviceName, err := opaServiceName()
 	if err != nil {
 		return "", errors.Wrap(err, "get service name")
 	}
 	return fmt.Sprintf("https://%s.%s.svc/v1/policies/%s", serviceName.Name, serviceName.Namespace, instance.Spec.Name), nil
 }
 
-func (r *ReconcileAdmissionPolicy) applyPolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) applyPolicy(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "applyPolicy"))
 	debug.Log("event", "applyPolicy", "name", instance.Name)
 
@@ -64,7 +64,7 @@ func (r *ReconcileAdmissionPolicy) applyPolicy(instance *policiesv1alpha1.Admiss
 	}
 
 	// Get the CA from the secret so we can communicate
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}

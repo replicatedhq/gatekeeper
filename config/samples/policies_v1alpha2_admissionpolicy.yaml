@@ -1,12 +1,11 @@
-apiVersion: policies.replicated.com/v1alpha1
+apiVersion: policies.replicated.com/v1alpha2
 kind: AdmissionPolicy
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
   name: no-latest-tags
 spec:
-  name: latest-fail
-  failurePolicy: Fail
+  name: latest
   policy: |
     package kubernetes.admission
 

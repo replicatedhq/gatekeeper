@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Status(c *config.Config, out io.Writer) *cobra.Command {
+func Policies(c *config.Config, out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "status",
-		Short: "view the status of current admission policies",
+		Use:   "policies",
+		Short: "view and manage the policies deployed to the cluster",
 		Long: `
-View the status of all currently installed and deployed Admission Controllers.
+View and perform some management operations on the policies installed on the cluster
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			g, err := gatekeeper.Get(c, out)
@@ -24,7 +24,7 @@ View the status of all currently installed and deployed Admission Controllers.
 				return err
 			}
 
-			return g.RunStatus(context.Background())
+			return g.RunPolicies(context.Background())
 		},
 	}
 

@@ -12,7 +12,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
-	policiesv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha2"
 	gatekeepertls "github.com/replicatedhq/gatekeeper/pkg/tls"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,9 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (r *ReconcileAdmissionPolicy) ensureOPARunningForPolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
-	debug := level.Info(log.With(r.Logger, "method", "ensureOPARunningForPolicy"))
-	debug.Log("event", "ensure opa instance running", "failurePolicy", instance.Spec.FailurePolicy)
+func (r *ReconcileAdmissionPolicy) ensureOPARunning(instance *policiesv1alpha2.AdmissionPolicy) error {
+	debug := level.Info(log.With(r.Logger, "method", "ensureOPARunning"))
+	debug.Log("event", "ensure opa instance running")
 
 	// Create the opa instance
 	if err := r.reconcileOpenPolicyAgentSecret(instance); err != nil {
@@ -42,16 +42,16 @@ func (r *ReconcileAdmissionPolicy) ensureOPARunningForPolicy(instance *policiesv
 	return nil
 }
 
-// reconcileTLSWithFailurePolicy will create a ca and cert secret for the instance with the failure policy
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *policiesv1alpha1.AdmissionPolicy) error {
+// reconcileOpenPolicyAgentSecret will create a ca and cert secret for the instance
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentSecret"))
-	debug.Log("event", "reconciling opa secret", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "reconciling opa secret")
 
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+	serviceName, err := opaServiceName()
 	if err != nil {
 		return errors.Wrap(err, "get service name")
 	}
@@ -103,19 +103,19 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *poli
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentService"))
-	debug.Log("event", "reconciling opa service", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "reconciling opa service")
 
-	serviceName, err := opaSecretName(instance.Spec.FailurePolicy)
+	serviceName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get service name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return errors.Wrap(err, "get deployment name")
 	}
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}
@@ -131,7 +131,6 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *pol
 			Labels: map[string]string{
 				"app":               "gatekeeper",
 				"role":              "openpolicyagent",
-				"failurePolicy":     instance.Spec.FailurePolicy,
 				"caBundleSecret":    secretName.Name,
 				"caBundleNamespace": secretName.Namespace,
 			},
@@ -172,10 +171,10 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *pol
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.waitForOpenPolicyAgentDeploymentReady"))
 
-	debug.Log("event", "waiting for opa to report ready", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "waiting for opa to report ready")
 
 	abortAt := time.Now().Add(time.Minute * 2)
 	for {
@@ -194,18 +193,18 @@ func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instanc
 	}
 }
 
-func (r *ReconcileAdmissionPolicy) isOpenPolicyAgentDeploymentReady(instance *policiesv1alpha1.AdmissionPolicy) (bool, error) {
+func (r *ReconcileAdmissionPolicy) isOpenPolicyAgentDeploymentReady(instance *policiesv1alpha2.AdmissionPolicy) (bool, error) {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.isOpenPolicyAgentDeploymentReady"))
 
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return false, errors.Wrap(err, "get secret name")
 	}
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+	serviceName, err := opaServiceName()
 	if err != nil {
 		return false, errors.Wrap(err, "get service name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return false, errors.Wrap(err, "get deployment name")
 	}
@@ -285,16 +284,16 @@ response = {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentDeployment(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentDeployment(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentDeployment"))
 
-	debug.Log("event", "reconciling opa deployment", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "reconciling opa deployment")
 
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return errors.Wrap(err, "get deployment name")
 	}

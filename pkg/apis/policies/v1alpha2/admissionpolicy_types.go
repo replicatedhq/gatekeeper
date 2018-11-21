@@ -14,51 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type OpenPolicyAgentEnabledFailureModes struct {
-	Ignore bool `json:"ignore"`
-	Fail   bool `json:"fail"`
+// AdmissionPolicySpec defines the desired state of AdmissionPolicy
+type AdmissionPolicySpec struct {
+	Name   string `json:"name"`
+	Policy string `json:"policy"`
 }
 
-// OpenPolicyAgentSpec defines the desired state of OpenPolicyAgent
-type OpenPolicyAgentSpec struct {
-	Name                string                              `json:"name"`
-	EnabledFailureModes *OpenPolicyAgentEnabledFailureModes `json:"enabledFailureModes"`
-}
-
-// OpenPolicyAgentStatus defines the observed state of OpenPolicyAgent
-type OpenPolicyAgentStatus struct {
-	MainPolicyDeployed bool `json:"mainPolicyDeployed"`
+// AdmissionPolicyStatus defines the observed state of AdmissionPolicy
+type AdmissionPolicyStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenPolicyAgent is the Schema for the openpolicyagents API
+// AdmissionPolicy is the Schema for the admissionpolicies API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-type OpenPolicyAgent struct {
+type AdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OpenPolicyAgentSpec   `json:"spec,omitempty"`
-	Status OpenPolicyAgentStatus `json:"status,omitempty"`
+	Spec   AdmissionPolicySpec   `json:"spec,omitempty"`
+	Status AdmissionPolicyStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OpenPolicyAgentList contains a list of OpenPolicyAgent
-type OpenPolicyAgentList struct {
+// AdmissionPolicyList contains a list of AdmissionPolicy
+type AdmissionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []OpenPolicyAgent `json:"items"`
+	Items           []AdmissionPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&OpenPolicyAgent{}, &OpenPolicyAgentList{})
+	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
 }

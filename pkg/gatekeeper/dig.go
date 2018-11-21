@@ -23,6 +23,8 @@ func buildInjector(c *config.Config, out io.Writer) (*dig.Container, error) {
 		logger.New,
 
 		kubernetes.NewClient,
+		kubernetes.NewGatekeeperClient,
+
 		NewGatekeeper,
 	}
 
