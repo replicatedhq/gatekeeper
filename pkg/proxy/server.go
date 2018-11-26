@@ -76,6 +76,7 @@ func (p *GatekeeperProxy) Healthz(c *gin.Context) {
 }
 
 func (p GatekeeperProxy) AdmissionRequest(c *gin.Context) {
+	warn := level.Warn(log.With(p.Logger, "method", "GatekeeperProxy.AdmissionRequest"))
 	debug := level.Info(log.With(p.Logger, "method", "GatekeeperProxy.AdmissionRequest"))
 	debug.Log("event", "admission request")
 
@@ -113,14 +114,15 @@ func (p GatekeeperProxy) AdmissionRequest(c *gin.Context) {
 	decisions := make([]admissionv1beta1.AdmissionReview, 0, 0)
 
 	for _, upstream := range upstreams {
-		debug.Log("event", "sending upstream", "upstream", upstream.URI)
+		debug.Log("event", "sending upstream...", "upstream", upstream.URI)
 
 		rootCAs, err := x509.SystemCertPool()
 		if rootCAs == nil {
 			rootCAs = x509.NewCertPool()
 		}
 		if ok := rootCAs.AppendCertsFromPEM(upstream.CABundle); !ok {
-			continue // TODO need to log, alert
+			warn.Log("event", "append certs from pem", "err", "not ok")
+			continue
 		}
 		config := &tls.Config{
 			RootCAs: rootCAs,
@@ -132,18 +134,20 @@ func (p GatekeeperProxy) AdmissionRequest(c *gin.Context) {
 		}
 		req, err := http.NewRequest("POST", upstream.URI, strings.NewReader(body))
 		if err != nil {
-			continue // TODO need to log, alert
+			warn.Log("event", "build request to post to upstream", "err", err)
+			continue
 		}
 		req.ContentLength = int64(len(body))
 		resp, err := client.Do(req)
 		if err != nil {
-			continue //TODO need to log, alert
+			warn.Log("event", "send request upstream", "err", err)
+			continue
 		}
 
 		defer resp.Body.Close()
 		var decision admissionv1beta1.AdmissionReview
 		if err := json.NewDecoder(resp.Body).Decode(&decision); err != nil {
-			debug.Log("event", "error decoding response", "err", err)
+			warn.Log("event", "error decoding response", "err", err)
 			continue
 		}
 
@@ -155,6 +159,7 @@ func (p GatekeeperProxy) AdmissionRequest(c *gin.Context) {
 		}
 
 		// TODO increment counters on the policy
+		debug.Log("event", "admission decision", "allowed", allowed)
 	}
 
 	// Pick a response to send...
