@@ -12,20 +12,18 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
-	policiesv1alpha1 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/replicatedhq/gatekeeper/pkg/apis/policies/v1alpha2"
 	gatekeepertls "github.com/replicatedhq/gatekeeper/pkg/tls"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (r *ReconcileAdmissionPolicy) ensureOPARunningForPolicy(instance *policiesv1alpha1.AdmissionPolicy) error {
-	debug := level.Info(log.With(r.Logger, "method", "ensureOPARunningForPolicy"))
-	debug.Log("event", "ensure opa instance running", "failurePolicy", instance.Spec.FailurePolicy)
+func (r *ReconcileAdmissionPolicy) ensureOPARunning(instance *policiesv1alpha2.AdmissionPolicy) error {
+	debug := level.Info(log.With(r.Logger, "method", "ensureOPARunning"))
+	debug.Log("event", "ensure opa instance running")
 
 	// Create the opa instance
 	if err := r.reconcileOpenPolicyAgentSecret(instance); err != nil {
@@ -40,24 +38,20 @@ func (r *ReconcileAdmissionPolicy) ensureOPARunningForPolicy(instance *policiesv
 	if err := r.waitForOpenPolicyAgentDeploymentReady(instance); err != nil {
 		return errors.Wrap(err, "is opa ready")
 	}
-	if err := r.reconcileOpenPolicyAgentValidatingWebhook(instance); err != nil {
-		return errors.Wrap(err, "reconcile webhook")
-	}
 
 	return nil
 }
 
-// reconcileTLSWithFailurePolicy will create a ca and cert secret for the instance with the failure policy
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *policiesv1alpha1.AdmissionPolicy) error {
+// reconcileOpenPolicyAgentSecret will create a ca and cert secret for the instance
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentSecret"))
+	debug.Log("event", "reconciling opa secret")
 
-	debug.Log("event", "reconciling opa secret", "failurePolicy", instance.Spec.FailurePolicy)
-
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+	serviceName, err := opaServiceName()
 	if err != nil {
 		return errors.Wrap(err, "get service name")
 	}
@@ -109,18 +103,21 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentSecret(instance *poli
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentService"))
+	debug.Log("event", "reconciling opa service")
 
-	debug.Log("evnet", "reconciling opa service", "failurePolicy", instance.Spec.FailurePolicy)
-
-	serviceName, err := opaSecretName(instance.Spec.FailurePolicy)
+	serviceName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get service name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return errors.Wrap(err, "get deployment name")
+	}
+	secretName, err := opaSecretName()
+	if err != nil {
+		return errors.Wrap(err, "get secret name")
 	}
 
 	service := &corev1.Service{
@@ -131,6 +128,12 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *pol
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName.Name,
 			Namespace: serviceName.Namespace,
+			Labels: map[string]string{
+				"app":               "gatekeeper",
+				"role":              "openpolicyagent",
+				"caBundleSecret":    secretName.Name,
+				"caBundleNamespace": secretName.Namespace,
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -168,10 +171,10 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentService(instance *pol
 	return nil
 }
 
-func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.waitForOpenPolicyAgentDeploymentReady"))
 
-	debug.Log("event", "waiting for opa to report ready", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "waiting for opa to report ready")
 
 	abortAt := time.Now().Add(time.Minute * 2)
 	for {
@@ -190,18 +193,18 @@ func (r *ReconcileAdmissionPolicy) waitForOpenPolicyAgentDeploymentReady(instanc
 	}
 }
 
-func (r *ReconcileAdmissionPolicy) isOpenPolicyAgentDeploymentReady(instance *policiesv1alpha1.AdmissionPolicy) (bool, error) {
+func (r *ReconcileAdmissionPolicy) isOpenPolicyAgentDeploymentReady(instance *policiesv1alpha2.AdmissionPolicy) (bool, error) {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.isOpenPolicyAgentDeploymentReady"))
 
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return false, errors.Wrap(err, "get secret name")
 	}
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
+	serviceName, err := opaServiceName()
 	if err != nil {
 		return false, errors.Wrap(err, "get service name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return false, errors.Wrap(err, "get deployment name")
 	}
@@ -281,16 +284,16 @@ response = {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentDeployment(instance *policiesv1alpha1.AdmissionPolicy) error {
+func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentDeployment(instance *policiesv1alpha2.AdmissionPolicy) error {
 	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentDeployment"))
 
-	debug.Log("event", "reconciling opa deployment", "failurePolicy", instance.Spec.FailurePolicy)
+	debug.Log("event", "reconciling opa deployment")
 
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
+	secretName, err := opaSecretName()
 	if err != nil {
 		return errors.Wrap(err, "get secret name")
 	}
-	deploymentName, err := opaDeploymentName(instance.Spec.FailurePolicy)
+	deploymentName, err := opaDeploymentName()
 	if err != nil {
 		return errors.Wrap(err, "get deployment name")
 	}
@@ -372,87 +375,6 @@ func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentDeployment(instance *
 		debug.Log("event", "creating deployment")
 
 		err := r.Create(context.TODO(), deployment)
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
-	// TODO compare ignoring the generated fields
-
-	return nil
-}
-
-func (r *ReconcileAdmissionPolicy) reconcileOpenPolicyAgentValidatingWebhook(instance *policiesv1alpha1.AdmissionPolicy) error {
-	debug := level.Info(log.With(r.Logger, "method", "ReconcileAdmissionPolicy.reconcileOpenPolicyAgentValidatingWebhook"))
-
-	debug.Log("event", "reconciling opa validatingwebhook", "failurePolicy", instance.Spec.FailurePolicy)
-
-	secretName, err := opaSecretName(instance.Spec.FailurePolicy)
-	if err != nil {
-		return errors.Wrap(err, "get secret name")
-	}
-	serviceName, err := opaServiceName(instance.Spec.FailurePolicy)
-	if err != nil {
-		return errors.Wrap(err, "get service name")
-	}
-	webhookName := opaWebhookName(instance.Spec.FailurePolicy)
-
-	var policy admissionregistrationv1beta1.FailurePolicyType
-
-	if instance.Spec.FailurePolicy == "Ignore" {
-		policy = admissionregistrationv1beta1.Ignore
-	} else if instance.Spec.FailurePolicy == "Fail" {
-		policy = admissionregistrationv1beta1.Fail
-	}
-
-	// Read the CA bundle from the secret
-	tlsSecret := &corev1.Secret{}
-	err = r.Get(context.TODO(), secretName, tlsSecret)
-	if err != nil {
-		return errors.Wrap(err, "get tls secret")
-	}
-
-	validatingWebhookConfiguration := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ValidatingWebhookConfiguration",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: webhookName,
-		},
-		Webhooks: []admissionregistrationv1beta1.Webhook{
-			{
-				Name:          "validating-webhook.openpolicyagent.org",
-				FailurePolicy: &policy,
-				Rules: []admissionregistrationv1beta1.RuleWithOperations{
-					{
-						Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update},
-						Rule: admissionregistrationv1beta1.Rule{
-							APIGroups:   []string{"*"},
-							APIVersions: []string{"*"},
-							Resources:   []string{"*"},
-						},
-					},
-				},
-				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-					Service: &admissionregistrationv1beta1.ServiceReference{
-						Namespace: serviceName.Namespace,
-						Name:      serviceName.Name,
-					},
-					CABundle: tlsSecret.Data["ca.crt"],
-				},
-			},
-		},
-	}
-
-	foundValidatingWebhookConfiguration := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-	err = r.Get(context.TODO(), types.NamespacedName{Name: webhookName, Namespace: ""}, foundValidatingWebhookConfiguration)
-	if err != nil && apierrors.IsNotFound(err) {
-		debug.Log("event", "creating validataing webhook configuration")
-
-		err := r.Create(context.TODO(), validatingWebhookConfiguration)
 		if err != nil {
 			return err
 		}

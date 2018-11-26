@@ -2,7 +2,11 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 
-all: test manager
+all: test manager cli
+
+# Build the CLI
+cli: fmt vet test generate
+	go build -o bin/gatekeeper github.com/replicatedhq/gatekeeper/cmd/gatekeeper
 
 # Run tests
 test: generate fmt vet manifests
@@ -40,6 +44,8 @@ vet:
 # Generate code
 generate:
 	go generate ./pkg/... ./cmd/...
+	rm -rf ./pkg/client/gatekeeperclientset/fake
+	rm -rf ./pkg/client/gatekeeperclientset/typed/policies/v1alpha2/fake
 
 # Build the docker image
 docker-build: test
@@ -50,3 +56,31 @@ docker-build: test
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+.state/vet: $(SRC)
+	go vet ./pkg/...
+	go vet ./cmd/...
+	@mkdir -p .state
+	@touch .state/vet
+
+.state/cc-test-reporter:
+	@mkdir -p .state/
+	wget -O .state/cc-test-reporter https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
+	chmod +x .state/cc-test-reporter
+
+.state/lint: $(SRC)
+	golint ./pkg/... | grep -vE '_mock|e2e' | grep -v "should have comment" | grep -v "comment on exported" || :
+	golint ./cmd/... | grep -vE '_mock|e2e' | grep -v "should have comment" | grep -v "comment on exported" || :
+	@mkdir -p .state
+	@touch .state/lint
+
+.state/coverage.out: $(SRC)
+	@mkdir -p .state/
+	#the reduced parallelism here is to avoid hitting the memory limits - we consistently did so with two threads on a 4gb instance
+	go test -parallel 1 -p 1 -coverprofile=.state/coverage.out ./pkg/...
+
+ci-upload-coverage: .state/coverage.out .state/cc-test-reporter
+	./.state/cc-test-reporter format-coverage -o .state/codeclimate/codeclimate.json -t gocov .state/coverage.out
+	./.state/cc-test-reporter upload-coverage -i .state/codeclimate/codeclimate.json
+
+citest: .state/vet .state/lint .state/coverage.out

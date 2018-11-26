@@ -5,15 +5,13 @@ GateKeeper installs a Policy controller to manage AdmissionPolicy documents in t
 An example AdmissionPolicy is:
 
 ```yaml
-apiVersion: policies.replicated.com/v1alpha1
+apiVersion: policies.replicated.com/v1alpha2
 kind: AdmissionPolicy
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
   name: no-latest-tags
 spec:
-  name: latest
-  failurePolicy: Ignore
   policy: |
     package kubernetes.admission
 

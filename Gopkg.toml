@@ -2,7 +2,6 @@ required = [
     "github.com/emicklei/go-restful",
     "github.com/onsi/ginkgo", # for test framework
     "github.com/onsi/gomega", # for test matchers
-    "k8s.io/client-go/plugin/pkg/client/auth/gcp", # for development against gcp
     "k8s.io/code-generator/cmd/client-gen", # for go generate
     "k8s.io/code-generator/cmd/deepcopy-gen", # for go generate
     "sigs.k8s.io/controller-tools/cmd/controller-gen", # for crd/rbac generation
@@ -18,6 +17,27 @@ required = [
 
 [prune]
   go-tests = true
+
+[[override]]
+  name = "k8s.io/client-go"
+  version = "8.0.0"
+
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.11.3"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.11.3"
+
+# Fix vendor/k8s.io/client-go/plugin/pkg/client/auth/azure/azure.go:246:4: cannot use expiresIn (type string) as type json.Number in field value
+# Fix vendor/k8s.io/client-go/plugin/pkg/client/auth/azure/azure.go:247:4: cannot use expiresOn (type string) as type json.Number in field value
+# Fix vendor/k8s.io/client-go/plugin/pkg/client/auth/azure/azure.go:248:4: cannot use expiresOn (type string) as type json.Number in field value
+# Fix vendor/k8s.io/client-go/plugin/pkg/client/auth/azure/azure.go:265:23: cannot use token.token.ExpiresIn (type json.Number) as type string in assignment
+# Fix vendor/k8s.io/client-go/plugin/pkg/client/auth/azure/azure.go:266:23: cannot use token.token.ExpiresOn (type json.Number) as type string in assignment
+[[override]]
+name = "github.com/Azure/go-autorest"
+revision = "bca49d5b51a50dc5bb17bbf6204c711c6dbded06"
 
 
 # STANZAS BELOW ARE GENERATED AND MAY BE WRITTEN - DO NOT MODIFY BELOW THIS LINE.
@@ -48,3 +68,7 @@ version="v1.4.7"
 [[constraint]]
   name = "admiralty.io/multicluster-service-account"
   version = "0.1.0"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "0.0.3"

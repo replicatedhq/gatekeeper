@@ -1,5 +1,8 @@
 # GateKeeper
 
+[![CircleCI](https://circleci.com/gh/replicatedhq/gatekeeper/tree/master.svg?style=svg)](https://circleci.com/gh/replicatedhq/gatekeeper/tree/master)
+
+
 GateKeeper is a Kubernetes Operator for installing, configuring and managing [Open Policy Agent](https://www.openpolicyagent.org/) to provide dynamic admission controllers in a cluster.
 
 ## Getting Started
@@ -20,9 +23,20 @@ For more information on the components, and other methods to install GateKeeper,
 
 ## Deploying Policies
 
-After installing GateKeeper to a cluster, a policy can be deployed using `kubectl apply -f ./config/samples/policies_v1alpha1_admissionpolicy.yaml`. (This is a sample policy that prevents any pod from using images tagged `:latest`). When the policy is applied, if OPA is running in the same namespace, the controller will delpoy the policy from the YAML to the OPA instance. If OPA is not found, the controller will provision a new OPA instance, and deploy the policy to that new instance, whne it's ready.
+After installing GateKeeper to a cluster, a policy can be deployed using `kubectl apply -f ./config/samples/policies_v1alpha2_admissionpolicy.yaml`. (This is a sample policy that prevents any pod from using images tagged `:latest`). When the policy is applied, if OPA is running in the same namespace, the controller will delpoy the policy from the YAML to the OPA instance. If OPA is not found, the controller will provision a new OPA instance, and deploy the policy to that new instance, whne it's ready.
 
 This handles the TLS configuration, webhook configuration, and all underlying Kubernetes resources that are required to create a dynamic admission controller.
+
+## GateKeeper CLI
+
+#### View Current Policies
+
+```shell
+$ gatekeeper status
+POLICY NAME        FAILURE POLICY     LAST_ALLOWED      LAST_BLOCKED          ALLOWED       BLOCKED
+latest             Ignore             An hour ago       Never                 1023          0
+helm               Fail               Just now          A day ago             1056          8
+```
 
 ## Motivations
 
