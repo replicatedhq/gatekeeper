@@ -24,12 +24,9 @@ spec:
           type: object
         spec:
           properties:
-            name:
-              type: string
             policy:
               type: string
           required:
-          - name
           - policy
           type: object
         status:

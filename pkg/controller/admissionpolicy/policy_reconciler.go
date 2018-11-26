@@ -51,7 +51,7 @@ func (r *ReconcileAdmissionPolicy) buildOPAUri(instance *policiesv1alpha2.Admiss
 	if err != nil {
 		return "", errors.Wrap(err, "get service name")
 	}
-	return fmt.Sprintf("https://%s.%s.svc/v1/policies/%s", serviceName.Name, serviceName.Namespace, instance.Spec.Name), nil
+	return fmt.Sprintf("https://%s.%s.svc/v1/policies/%s", serviceName.Name, serviceName.Namespace, instance.Name), nil
 }
 
 func (r *ReconcileAdmissionPolicy) applyPolicy(instance *policiesv1alpha2.AdmissionPolicy) error {

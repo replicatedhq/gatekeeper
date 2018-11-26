@@ -22,7 +22,6 @@ import (
 
 // AdmissionPolicySpec defines the desired state of AdmissionPolicy
 type AdmissionPolicySpec struct {
-	Name   string `json:"name"`
 	Policy string `json:"policy"`
 }
 

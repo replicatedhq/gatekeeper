@@ -31,8 +31,6 @@ spec:
             policy:
               type: string
           required:
-          - name
-          - failurePolicy
           - policy
           type: object
         status:

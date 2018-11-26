@@ -25,8 +25,7 @@ func (g *Gatekeeper) RunPolicies(ctx context.Context) error {
 
 	for _, policy := range policies.Items {
 		columns := []string{
-			policy.Spec.Name,
-			"Deployed",
+			policy.Name,
 			policy.ObjectMeta.CreationTimestamp.Format("Mon Jan 2 15:04:05 2006"),
 		}
 
@@ -40,7 +39,6 @@ func (g *Gatekeeper) RunPolicies(ctx context.Context) error {
 func listPoliciesHeader() string {
 	columns := []string{
 		"Name",
-		"Status",
 		"Deployed At",
 	}
 

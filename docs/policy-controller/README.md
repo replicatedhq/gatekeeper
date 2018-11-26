@@ -12,7 +12,6 @@ metadata:
     controller-tools.k8s.io: "1.0"
   name: no-latest-tags
 spec:
-  name: latest
   policy: |
     package kubernetes.admission
 
