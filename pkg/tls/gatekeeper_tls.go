@@ -41,7 +41,7 @@ func CreateCertificateAuthority(logger log.Logger) ([]byte, []byte, error) {
 	return cert, key, nil
 }
 
-// CreateCertFromCA takkes a certificate authority cert and key and generates a
+// CreateCertFromCA takes a certificate authority cert and key and generates a
 // new cert, and uses the CA to sign it
 func CreateCertFromCA(logger log.Logger, namespacedName types.NamespacedName, caCert []byte, caKey []byte) ([]byte, []byte, error) {
 	// Parse the ca into an x509 object
