@@ -18,6 +18,7 @@ import (
 	"github.com/replicatedhq/gatekeeper/pkg/config"
 	"github.com/spf13/viper"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -184,22 +185,14 @@ func (p GatekeeperProxy) listGatekeeperManagedOPAs() ([]*UpstreamValidatingWebho
 		return nil, errors.Wrap(err, "config and namespace")
 	}
 
-	services, err := p.K8sClient.CoreV1().Services(ns).List(metav1.ListOptions{})
+	allServices, err := p.K8sClient.CoreV1().Services(ns).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "list services")
 	}
+	services := filterServices(p.Logger, allServices.Items)
 
 	result := make([]*UpstreamValidatingWebhook, 0, 0)
-	for _, service := range services.Items {
-		val, ok := service.Labels["app"]
-		if !ok || val != "gatekeeper" {
-			continue
-		}
-		val, ok = service.Labels["role"]
-		if !ok || val != "openpolicyagent" {
-			continue
-		}
-
+	for _, service := range services {
 		caBundleSecretName, ok := service.Labels["caBundleSecret"]
 		if !ok {
 			debug.Log("event", "ignoring service", "service", service.Name, "reason", "no bundle secret")
@@ -217,13 +210,44 @@ func (p GatekeeperProxy) listGatekeeperManagedOPAs() ([]*UpstreamValidatingWebho
 			continue
 		}
 
-		upstream := UpstreamValidatingWebhook{
-			URI:      fmt.Sprintf("https://%s.%s.svc", service.Name, ns),
-			CABundle: secret.Data["ca.crt"],
+		upstream, err := upstreamFromObjects(p.Logger, service, secret)
+		if err != nil {
+			level.Error(p.Logger).Log("event", "get upstream from objects")
+			continue
 		}
 
-		result = append(result, &upstream)
+		result = append(result, upstream)
 	}
 
 	return result, nil
+}
+
+func upstreamFromObjects(log log.Logger, service *corev1.Service, secret *corev1.Secret) (*UpstreamValidatingWebhook, error) {
+	upstream := UpstreamValidatingWebhook{
+		URI:      fmt.Sprintf("https://%s.%s.svc", service.Name, service.Namespace),
+		CABundle: secret.Data["ca.crt"],
+	}
+
+	return &upstream, nil
+}
+
+// filterServices is an internal function to take a list of services, and return only the OPA services from the list
+func filterServices(log log.Logger, services []corev1.Service) []*corev1.Service {
+	result := make([]*corev1.Service, 0, 0)
+
+	for _, service := range services {
+		val, ok := service.Labels["app"]
+		if !ok || val != "gatekeeper" {
+			continue
+		}
+		val, ok = service.Labels["role"]
+		if !ok || val != "openpolicyagent" {
+			continue
+		}
+
+		fmt.Printf("\n\nadding service %#v\n\n", service)
+		result = append(result, &service)
+	}
+
+	return result
 }
