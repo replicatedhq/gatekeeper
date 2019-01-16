@@ -1,0 +1,49 @@
+digraph G {
+    edge [fontname = "menlo", style = filled, fontcolor = dodgerblue4];
+    node [fontname="menlo"];
+    forcelabels = true;
+    labelloc=top;
+    label="Current Implementation";
+
+    manager;
+    CRDs [style="", color=black, label=< <table border="0"><tr><td>Custom Resources</td></tr><tr><td>admissionpolicies.policies.replicated.com/v1alpha2</td></tr></table> >];
+
+
+
+    subgraph cluster_0 {
+        rank=same;
+        style="filled";
+        color="gray";
+        node [style=filled, color=white];
+        gk; opa; opa2;
+        label="Custom Resource children";
+    }
+
+    subgraph cluster_1 {
+        rank=same;
+        style="filled";
+        color="gray";
+        node [style=filled, color=white];
+        mwh;
+        label="Kubernetes";
+    }
+
+    gk[label=< Gatekeeper Deployment >];
+    opa[label=< OPA Deployment >];
+    opa2[label=< OPA Service >];
+
+    mwh[label="Mutating Web Hook"];
+
+
+    manager -> CRDs [dir="both" label="watches"];
+    manager -> gk [label="creates"];
+    manager -> opa [label="creates"];
+    manager -> opa2 [label="creates"];
+    opa2->opa;
+
+
+    manager -> mwh [label="creates"];
+    mwh -> opa2 [label="HTTP"];
+
+}
+
