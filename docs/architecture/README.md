@@ -1,6 +1,6 @@
 # Gatekeeper Architecture
 
-![Gatekeeper Runtime](https://github.com/replicatedhq/gatekeeper/blob/master/docs/architecturue/assets/arch-1.png)
+![Gatekeeper Runtime](https://github.com/replicatedhq/gatekeeper/blob/master/docs/architecture/assets/arch-1.png)
 
 - Kubebuilder Manager watches for `AdmissionPolicy` CRs
 - On CR creation, manager creates:
