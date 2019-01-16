@@ -9,7 +9,7 @@
     - OPA Service
     - Kubernetes (mutating or validating) Webhook that queries OPA service on resource creation
 
-Policies are POST'd to the OPA service by the manager
+Policies are POST'd to the OPA service by the manager.
 
 
 ### Gatekeeper Deployment
