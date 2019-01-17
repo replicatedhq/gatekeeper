@@ -43,7 +43,7 @@ digraph G {
 
 
     manager -> mwh [label="creates"];
-    mwh -> opa2 [label="HTTP"];
+    mwh -> opa2 [label="HTTPS \n(gatekeeper PKI)"];
 
 }
 
